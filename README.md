@@ -6,4 +6,5 @@ This script will search for CSV files in the 'files/' folder and extract their d
 
 # Future development
 Report on payments based on categories set
+
 Report on payments on a monthly basis
