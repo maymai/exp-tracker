@@ -4,7 +4,8 @@ import os
 from os import listdir
 from os.path import isfile, join
 
-
+if not os.path.exists("files/"):
+    os.makedirs("files/")
 db_connection = sqlite3.connect('expenses.sqlite')
 cur = db_connection.cursor()
 
