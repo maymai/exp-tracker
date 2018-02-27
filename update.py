@@ -125,7 +125,7 @@ def nocat_file_make():
             if cat[0] == 1:
                 f.write(str(cat[0]) + "," + cat[1])
             else:
-                f.write("\n" + str(cat[0]) + "," + str(cat[1]))
+                f.write("\n" + str(cat[0]) + "," + cat[1])
 
 def cat_assign():
     with open("files/new_cats.csv") as f:
