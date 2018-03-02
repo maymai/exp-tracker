@@ -124,13 +124,13 @@ def g_make():
         graphs[title] = yearly[y]
     monthly = cat_sum_by_month()
     year = sorted(monthly)[-1]
-    months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     m_title = {}
     for mon in months:
         m_title[mon] = "{0:02}: {1} {2}".format(g_count, mon, year)
         g_count += 1
     for m in monthly[year]:
-        title = m_title[m[:3].lower()]
+        title = m_title[m[:3].capitalize()]
         graphs[title] = monthly[year][m]
     del_key = []
     for graph in graphs:
