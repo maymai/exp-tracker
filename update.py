@@ -5,7 +5,6 @@ import exp_graphs as g
 from os import listdir
 from os.path import isfile, join
 
-NO_TRACK = ["bank", "card"]
 
 if not os.path.exists("files/"):
     os.makedirs("files/")
@@ -14,8 +13,8 @@ cur = db_connection.cursor()
 
 def db_make():
     cur.execute('''CREATE TABLE IF NOT EXISTS Categories
-        (cat_id INTEGER PRIMARY KEY, cat_name TEXT UNIQUE)''')
-    cur.execute("INSERT OR IGNORE INTO Categories (cat_name) VALUES ('uncategorised')")
+        (cat_id INTEGER PRIMARY KEY, cat_name TEXT UNIQUE, tracking INTEGER)''')
+    cur.execute("INSERT OR IGNORE INTO Categories (cat_name, tracking) VALUES ('uncategorised', 1)")
     cur.execute('''CREATE TABLE IF NOT EXISTS Payees
         (payee_id INTEGER PRIMARY KEY, payee_name TEXT UNIQUE, cat_id INTEGER)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS Transactions
@@ -24,8 +23,8 @@ def db_make():
 
 def db_add(table, values):
     if table == "categories":
-        cur.execute('''INSERT OR IGNORE INTO Categories (cat_name)
-            VALUES ('{val}')'''.format(val=values))
+        cur.execute('''INSERT OR IGNORE INTO Categories (cat_name, tracking)
+            VALUES ('{val}', {track})'''.format(val=values["cat_name"], track=values["tracking"]))
     elif table == "payees":
         cur.execute('''INSERT OR IGNORE INTO Payees (payee_name, cat_id)
             VALUES ('{val}', 1)'''.format(val=values))
@@ -64,7 +63,7 @@ def trans_by_cat(cat):
     return cat_t
 
 def cat_trans():
-    cats = cat_get()
+    cats = cat_get(tracking=False)
     t_by_cats = {}
     for cat in cats:
         if not t_by_cats.get(cat):
@@ -137,16 +136,17 @@ def g_make():
         for cat in graphs[graph]:
             if graphs[graph][cat] >= 0:
                 del_key.append([graph, cat])
-            elif cat in NO_TRACK:
-                del_key.append([graph, cat])
             else:
                 graphs[graph][cat] *= -1
     for key in del_key:
         del graphs[key[0]][key[1]]
     g.pie_make(graphs, "All Graphs")
 
-def cat_get():
-    cur.execute("SELECT * FROM Categories")
+def cat_get(tracking=True):
+    if tracking:
+        cur.execute("SELECT * FROM Categories")
+    else:
+        cur.execute("SELECT * FROM Categories WHERE tracking = 1")
     return cur.fetchall()
 
 def nocat_file_make():
@@ -154,22 +154,26 @@ def nocat_file_make():
     cur.execute("SELECT payee_name FROM Payees WHERE cat_id = 1")
     no_cat_payees = cur.fetchall()
     with open("files/new_cats.csv", "w") as f:
-        f.write("payee,cat")
+        f.write("payee,cat,tracking")
         for p in no_cat_payees:
             f.write("\n{0}".format(p[0]))
     with open("categories_list.csv", "w") as f:
         for cat in cats:
-            if cat[0] == 1:
-                f.write(str(cat[0]) + "," + cat[1])
+            if cat[2]:
+                track = "true"
             else:
-                f.write("\n" + str(cat[0]) + "," + cat[1])
+                track = "false"
+            if cat[0] == 1:
+                f.write(str(cat[0]) + "," + cat[1] + "," + track)
+            else:
+                f.write("\n" + str(cat[0]) + "," + cat[1] + "," + track)
 
 def cat_assign():
     with open("files/new_cats.csv") as f:
         payee_dict = csv.DictReader(f)
         for payee in payee_dict:
             if payee["cat"]:
-                db_add("categories", payee["cat"])
+                db_add("categories", values={"cat_name": payee["cat"], "tracking": payee["tracking"]})
                 cat_id = id_get("categories", payee["cat"])
                 cur.execute("UPDATE Payees SET cat_id={cat} WHERE payee_name='{pay}'".format(\
                     cat=cat_id, pay=payee["payee"]))
