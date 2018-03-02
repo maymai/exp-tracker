@@ -18,7 +18,7 @@ def pie_make(graphs, filename):
         g_data["values"] = list(graphs[g].values())
         g_data["name"] = g
         g_data["type"] = "pie"
-        g_data["hoverinfo"] = "label+percent+name"
+        g_data["hoverinfo"] = "all"
         g_data["textinfo"] = g
         gx = [((plot[1] - 1) * (1 / g_cols)) + 0.01, (plot[1] * (1 / g_cols)) - 0.01]
         gy = [1 - (((plot[0] - 1) * (1 / g_rows)) + 0.01), 1 - ((plot[0] * (1 / g_rows)) - 0.01)]
