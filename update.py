@@ -1,8 +1,11 @@
 import sqlite3
 import csv
 import os
+import exp_graphs as g
 from os import listdir
 from os.path import isfile, join
+
+NO_TRACK = ["bank", "card"]
 
 if not os.path.exists("files/"):
     os.makedirs("files/")
@@ -84,29 +87,63 @@ def cat_sum_by_month():
     sum_by_cat = {}
     for cat in t_by_cats:
         for t in t_by_cats[cat]:
+            year = t[0][-4:]
             month = t[0][3:-4]
-            if not sum_by_cat.get(month):
-                sum_by_cat[month] = {}
-            if not sum_by_cat[month].get(cat[1]):
-                sum_by_cat[month][cat[1]] = 0
-            sum_by_cat[month][cat[1]] += t[1]
+            if not sum_by_cat.get(year):
+                sum_by_cat[year] = {}
+            if not sum_by_cat[year].get(month):
+                sum_by_cat[year][month] = {}
+            if not sum_by_cat[year][month].get(cat[1]):
+                sum_by_cat[year][month][cat[1]] = 0
+            sum_by_cat[year][month][cat[1]] += t[1]
     return sum_by_cat
 
 def cat_sum_by_year():
     t_by_cats = cat_trans()
     sum_by_cat = {}
     for cat in t_by_cats:
-        print(cat)
         for t in t_by_cats[cat]:
-            print(t)
             year = t[0][-4:]
-            print(year)
             if not sum_by_cat.get(year):
                 sum_by_cat[year] = {}
             if not sum_by_cat[year].get(cat[1]):
                 sum_by_cat[year][cat[1]] = 0
             sum_by_cat[year][cat[1]] += t[1]
     return sum_by_cat
+
+def g_make():
+    graphs = {}
+    g_count = 0
+    all_title = "{0:02}: All Time".format(g_count)
+    graphs[all_title] = cat_sum()
+    g_count += 1
+    yearly = cat_sum_by_year()
+    for y in yearly:
+        title = "{0:02}: {1}".format(g_count, y)
+        g_count += 1
+        graphs[title] = yearly[y]
+    monthly = cat_sum_by_month()
+    year = sorted(monthly)[-1]
+    months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+    m_title = {}
+    for mon in months:
+        m_title[mon] = "{0:02}: {1} {2}".format(g_count, mon, year)
+        g_count += 1
+    for m in monthly[year]:
+        title = m_title[m[:3].lower()]
+        graphs[title] = monthly[year][m]
+    del_key = []
+    for graph in graphs:
+        for cat in graphs[graph]:
+            if graphs[graph][cat] >= 0:
+                del_key.append([graph, cat])
+            elif cat in NO_TRACK:
+                del_key.append([graph, cat])
+            else:
+                graphs[graph][cat] *= -1
+    for key in del_key:
+        del graphs[key[0]][key[1]]
+    g.pie_make(graphs, "All Graphs")
 
 def cat_get():
     cur.execute("SELECT * FROM Categories")
@@ -181,3 +218,4 @@ def read_files():
 
 db_make()
 read_files()
+g_make()

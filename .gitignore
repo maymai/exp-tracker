@@ -1,3 +1,5 @@
 expenses.sqlite
-files/* 
+files/*
 categories_list.csv
+*.html
+__pycache__
