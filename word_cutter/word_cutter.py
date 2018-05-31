@@ -1,71 +1,89 @@
 import csv
 from difflib import SequenceMatcher as sm
 
-def get_similar(a, b):
+def get_similarity(a, b):
     return sm(None, a, b).ratio()
 
-list_of_payees = csv.reader(open('list_of_payees.csv'))
-final_payees = []
-places = ["cardiff", "porth", "caerphilly", "ponty", "pontypridd",
-          "swansea", "hove", "brighton", "wales", "caernarfon", "uk"]
-for payee in list_of_payees:
-    paypal = False
-    formated_payee = payee[0].lower()
-    if "android" in formated_payee:
-        formated_payee = formated_payee[:formated_payee.index("android")]
-    if "paypal" in formated_payee:
-        paypal = True
-        formated_payee = formated_payee[formated_payee.index("*") + 1:]
-    if "pp" in formated_payee[:3]:
-        formated_payee = formated_payee[formated_payee.index("*") + 1:]
-    if "contactless" in formated_payee:
-        formated_payee = formated_payee[:formated_payee.index(" contactless")]
-    good_list = []
-    for word in  formated_payee.split():
-        if len(word) > 2:
-            good_list.append(word)
-    formated_payee = " ".join(good_list)
-    bad_number = ""
-    for char in formated_payee:
+def cut_by_word(word, cut, check=None, prefix=True, start=0, end=0):
+    if not check: check = cut
+    if not end: end = len(word)
+    if prefix:
+        if check in word[start:end]:
+            return word[:word.index(cut)]
+    else:
+        if check in word[start:end]:
+            return word[word.index(cut) + 1:]
+    return word
+
+def cut_by_length(words, length):
+    new_words = []
+    for word in words:
+        if len(word) > length:
+            new_words.append(word)
+    return " ".join(new_words)
+
+def cut_by_numbers(word):
+    number = ""
+    for char in word:
         try:
             integer = int(char)
         except ValueError:
             continue
         else:
-            bad_number = char
+            number = char
             break
-    if bad_number:
-        if formated_payee.index(bad_number) > 0:
-            if formated_payee[formated_payee.index(bad_number) - 1] == " ":
-                formated_payee = formated_payee[:formated_payee.index(bad_number)]
+    if number:
+        if word.index(number) > 0:
+            if word[word.index(number) - 1] == " ":
+                return word[:word.index(number)]
+    return word
+
+def cut_by_place(word):
+    words = word.split()
+    last_word = words[-1]
+    places = ["cardiff", "porth", "caerphilly", "ponty", "pontypridd",
+              "swansea", "hove", "brighton", "wales", "caernarfon", "uk"]
     for place in places:
-        last_word = formated_payee.rsplit(None, 1)
-        while get_similar(last_word[-1], place) > 0.67 and len(last_word) > 1:
-            formated_payee = formated_payee[:(len(last_word[-1]) + 1)*(-1)]
-            last_word = formated_payee.rsplit(None, 1)
-    if formated_payee:
-        if not final_payees:
-            final_payees.append(formated_payee)
-        elif formated_payee not in final_payees:
-            exists = False
-            for pay in final_payees:
-                sim = get_similar(formated_payee, pay)
-                if sim > 0.75:
-                    # print(formated_payee + " is " + str(sim) + " similar to " + pay)
-                    exists = True
-                    break
-            # for word in formated_payee.split():
-            #     if word != "the" and word != "of" and word != "plc":
-            #         for payee in final_payees:
-            #             for p in payee.split():
-            #                 sim = similar(word, p)
-            #                 if sim > 0.89:
-            #                     print(word + " is " + str(sim) + " similar to " + p)
-            #                     exists = True
-            #                     break
-            if not exists:
-                final_payees.append(formated_payee)
-print("Total Payees: " + str(len(final_payees)))
-final_payees = sorted(final_payees)
-for payee in final_payees:
-    print(payee)
+        while get_similarity(last_word, place) > 0.67 and len(words) > 1:
+            words.remove(last_word)
+            last_word = words[-1]
+    return " ".join(words)
+
+def add_to_list(list, item, similarity=0.75):
+    if not list:
+        list.append(item)
+    elif item not in list:
+        exists = False
+        for i in list:
+            if get_similarity(item, i) > similarity:
+                exists = True
+                break
+        if not exists:
+            list.append(item)
+    return list
+
+def format_strings(file, header=None):
+    if file[-4:] != ".csv":
+        file += ".csv"
+    list_of_items = csv.reader(open(file))
+    final_list = []
+    for row in list_of_items:
+        if header:
+            item = row[header]
+        else:
+            item = row
+        formated_item = item[0].lower()
+        formated_item = cut_by_word(formated_item, "android")
+        formated_item = cut_by_word(formated_item, "*", "paypal", False)
+        formated_item = cut_by_word(formated_item, "*", "pp", False, end=3)
+        formated_item = cut_by_word(formated_item, " contactless")
+        formated_item = cut_by_length(formated_item.split(), 2)
+        formated_item = cut_by_numbers(formated_item)
+        formated_item = cut_by_place(formated_item)
+        final_list = add_to_list(final_list, formated_item)
+    print("Total Payees: " + str(len(final_list)))
+    final_list = sorted(final_list)
+    for item in final_list:
+        print(item)
+
+format_strings("list_of_payees")
