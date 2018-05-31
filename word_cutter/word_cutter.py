@@ -62,28 +62,32 @@ def add_to_list(list, item, similarity=0.75):
             list.append(item)
     return list
 
-def format_strings(file, header=None):
+def format_file(file, header=None):
     if file[-4:] != ".csv":
         file += ".csv"
-    list_of_items = csv.reader(open(file))
     final_list = []
+    list_of_items = csv.reader(open(file))
     for row in list_of_items:
         if header:
             item = row[header]
         else:
             item = row
-        formated_item = item[0].lower()
-        formated_item = cut_by_word(formated_item, "android")
-        formated_item = cut_by_word(formated_item, "*", "paypal", False)
-        formated_item = cut_by_word(formated_item, "*", "pp", False, end=3)
-        formated_item = cut_by_word(formated_item, " contactless")
-        formated_item = cut_by_length(formated_item.split(), 2)
-        formated_item = cut_by_numbers(formated_item)
-        formated_item = cut_by_place(formated_item)
-        final_list = add_to_list(final_list, formated_item)
+        formatted_item = format_string(item)
+        final_list = add_to_list(final_list, formatted_item)
     print("Total Payees: " + str(len(final_list)))
     final_list = sorted(final_list)
     for item in final_list:
         print(item)
 
-format_strings("list_of_payees")
+def format_string(item):
+    formatted_item = item[0].lower()
+    formatted_item = cut_by_word(formatted_item, "android")
+    formatted_item = cut_by_word(formatted_item, "*", "paypal", False)
+    formatted_item = cut_by_word(formatted_item, "*", "pp", False, end=3)
+    formatted_item = cut_by_word(formatted_item, " contactless")
+    formatted_item = cut_by_length(formatted_item.split(), 2)
+    formatted_item = cut_by_numbers(formatted_item)
+    formatted_item = cut_by_place(formatted_item)
+    return formatted_item
+
+format_file("list_of_payees")
