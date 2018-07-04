@@ -12,7 +12,7 @@ CSV files used are based on nationwide bank statements. Headers are hardcoded
 import csv
 import re
 import os
-import collections
+import pickle
 from word_cutter import word_cutter
 
 
@@ -127,25 +127,25 @@ def _merge_transactions(old_transactions, new_transactions):
     # create new list with all old transactions and append only new transactions
     final_transactions = old_transactions.copy()
     for n in new_h_trans:
-        duplicate = False
+        add_me = True
         for existing_trans in final_transactions:
             if n == {"Name": existing_trans["Name"], "Date": existing_trans["Date"],
                      "Paid in": existing_trans["Paid in"], "Paid out": existing_trans["Paid out"]}:
-                # have to specify keys since some may have the extra key 'Category'
-                duplicate = True
+                # have to specify keys since some may have the extra key 'Pay category'
+                add_me = False
                 break
-        if not duplicate:
+        if add_me:
             final_transactions.append(n)
-    # add category key to existing payees
+    # add category key to payees
     for transaction in final_transactions:
         if not transaction.get("Pay category"):
             payee = transaction.get("Name")
             for t in final_transactions:
-                if t["Name"] == payee and t.get("Pay category"):
+                if word_cutter.get_similarity(t["Name"], payee) > 0.75 and t.get("Pay category"):
                     transaction["Pay category"] = t["Pay category"]
                     break
-                else:
-                    transaction["Pay category"] = ""
+            if not transaction.get("Pay category"):
+                transaction["Pay category"] = ""
     return final_transactions
 
 
@@ -170,4 +170,37 @@ def create_final_transaction_list(new_file):
             writer.writeheader()
             for transaction in final_transactions:
                 writer.writerow(transaction)
+    _set_categories(filename)
     return final_transactions
+
+
+def _set_categories(filename):
+    """
+    review transactions csv and create a category: list of payees dictionary
+    which is saved on a pickle file
+    :return: categories dictionary
+    """
+    pickle_file = "categories"
+    if not os.path.isfile(pickle_file):
+        categories = {}
+    else:
+        with open(pickle_file, "rb") as pf:
+            categories = pickle.load(pf)
+    transactions = _read_csv(filename)
+    for transaction in transactions:
+        if transaction["Pay category"]:
+            if not categories.get(transaction["Pay category"]):
+                categories[transaction["Pay category"]] = [transaction["Name"]]
+            else:
+                if transaction["Name"] not in categories[transaction["Pay category"]]:
+                    add_me = True
+                    for payee in categories[transaction["Pay category"]]:
+                        if word_cutter.get_similarity(payee, transaction["Name"]) > 0.80:
+                            add_me = False
+                            break
+                    if add_me:
+                        categories[transaction["Pay category"]].append(transaction["Name"])
+    for cat in categories:
+        print(cat + ": " + str(categories[cat]))
+    with open(pickle_file, "wb") as pf:
+        pickle.dump(categories, pf)

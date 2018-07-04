@@ -14,7 +14,7 @@ import re
 from difflib import SequenceMatcher as sm
 
 
-def _get_similarity(a, b):
+def get_similarity(a, b):
     """
     :param a: string
     :param b: string
@@ -92,9 +92,10 @@ def _cut_by_place(word):
     words = word.split()
     last_word = words[-1]
     places = ["cardiff", "porth", "caerphilly", "ponty", "pontypridd",
-              "swansea", "hove", "brighton", "wales", "caernarfon", "uk", "bangor"]
+              "swansea", "hove", "brighton", "wales", "caernarfon", "uk", "bangor",
+              "london", "limited", "nantgarw", "birmingham"]
     for place in places:
-        while _get_similarity(last_word, place) > 0.67 and len(words) > 1:
+        while get_similarity(last_word, place) > 0.67 and len(words) > 1:
             words.remove(last_word)
             last_word = words[-1]
     return " ".join(words)
@@ -113,7 +114,7 @@ def _add_individual_items_to_list(list, item, similarity=0.75):
     elif item not in list:
         exists = False
         for i in list:
-            if _get_similarity(item, i) > similarity:
+            if get_similarity(item, i) > similarity:
                 exists = True
                 break
         if not exists:
